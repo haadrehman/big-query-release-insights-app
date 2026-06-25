@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BigQuery Release Insights</title>
+  
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Stay updated with the latest BigQuery features, changes, issues, and announcements. Draft and share updates instantly.">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+  <!-- Background Mesh Glows -->
+  <div class="mesh-glow primary"></div>
+  <div class="mesh-glow secondary"></div>
+
+  <!-- App Container -->
+  <div class="app-container">
+    
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-logo">
+        <svg class="logo-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="url(#logo-grad-1)"/>
+          <path d="M2 17L12 22L22 17" stroke="url(#logo-grad-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 12L12 17L22 12" stroke="url(#logo-grad-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <defs>
+            <linearGradient id="logo-grad-1" x1="2" y1="2" x2="22" y2="12" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#3b82f6"/>
+              <stop offset="1" stop-color="#8b5cf6"/>
+            </linearGradient>
+            <linearGradient id="logo-grad-2" x1="2" y1="17" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#8b5cf6"/>
+              <stop offset="1" stop-color="#ec4899"/>
+            </linearGradient>
+            <linearGradient id="logo-grad-3" x1="2" y1="12" x2="22" y2="17" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#3b82f6"/>
+              <stop offset="1" stop-color="#ec4899"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="logo-text">
+          <h1>BigQuery Release Insights</h1>
+          <span class="sub-title">Google Cloud Feed Hub</span>
+        </div>
+      </div>
+      
+      <div class="header-controls">
+        <div class="sync-status" id="syncStatus">Checking feed...</div>
+        <button id="refreshBtn" class="btn-refresh" aria-label="Refresh release notes" title="Refresh release notes">
+          <svg class="spinner-icon" id="spinnerIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+          </svg>
+          <span>Refresh</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Filters Section -->
+    <section class="filters-section">
+      <div class="search-bar">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+        </svg>
+        <input type="text" id="searchInput" placeholder="Search updates (e.g. embeddings, Gemini, continuous queries...)" aria-label="Search release notes">
+      </div>
+      
+      <div class="filter-group">
+        <span class="filter-label">Filter by type:</span>
+        <div class="filter-tags" id="filterTags">
+          <button class="filter-tag active" data-type="All">All</button>
+          <button class="filter-tag" data-type="Feature">Features</button>
+          <button class="filter-tag" data-type="Breaking">Breaking</button>
+          <button class="filter-tag" data-type="Announcement">Announcements</button>
+          <button class="filter-tag" data-type="Issue">Issues</button>
+          <button class="filter-tag" data-type="Change">Changes</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Loading Skeleton Container -->
+      <div class="skeleton-container" id="skeletonContainer">
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+      </div>
+
+      <!-- Release Notes Grid -->
+      <div class="notes-grid" id="notesGrid" style="display: none;">
+        <!-- Dynamic Cards Inserted Here -->
+      </div>
+
+      <!-- No Results State -->
+      <div class="no-results" id="noResults" style="display: none;">
+        <svg class="no-results-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/>
+        </svg>
+        <h3>No matching updates found</h3>
+        <p>Try refining your search term or clearing the type filters.</p>
+        <button id="clearFiltersBtn" class="btn-secondary">Reset Filters</button>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer-bar">
+      <p>&copy; 2026 BigQuery Release Insights Hub. Live feed fetched from official Google Cloud release logs.</p>
+    </footer>
+  </div>
+
+  <!-- Tweet Composer Modal -->
+  <dialog id="tweetDialog" closedby="any" aria-labelledby="dialogTitle">
+    <div class="dialog-content">
+      <header class="dialog-header">
+        <h2 id="dialogTitle">Draft X (Twitter) Update</h2>
+        <button class="btn-close-dialog" onclick="document.getElementById('tweetDialog').close()" aria-label="Close dialog">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6 6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </header>
+      
+      <main class="dialog-body">
+        <!-- Selected Update Details (Read-only Preview) -->
+        <div class="update-preview-box">
+          <div class="preview-meta">
+            <span class="preview-type-badge" id="previewTypeBadge">Feature</span>
+            <span class="preview-date" id="previewDate">June 23, 2026</span>
+          </div>
+          <p class="preview-text" id="previewText">Selected release note details go here...</p>
+        </div>
+
+        <!-- Custom Composer Textarea -->
+        <div class="composer-container">
+          <label for="tweetContent" class="field-label">Customize your Tweet:</label>
+          <textarea id="tweetContent" rows="6" maxlength="280" placeholder="What's happening?"></textarea>
+          
+          <!-- Character Count Tracker -->
+          <div class="composer-footer">
+            <div class="char-count-group">
+              <div class="progress-ring-container">
+                <svg class="progress-ring" width="24" height="24">
+                  <circle class="progress-ring__circle-bg" stroke="rgba(255,255,255,0.1)" stroke-width="2" fill="transparent" r="9" cx="12" cy="12"/>
+                  <circle class="progress-ring__circle" id="charProgress" stroke="#3b82f6" stroke-width="2.5" fill="transparent" r="9" cx="12" cy="12"/>
+                </svg>
+              </div>
+              <span id="charCount">0 / 280</span>
+            </div>
+            <span class="char-warning" id="charWarning" style="display: none;">Approaching limit!</span>
+          </div>
+        </div>
+
+        <!-- Extra Hashtags Picker -->
+        <div class="hashtags-selector">
+          <span class="label-text">Quick Hashtags:</span>
+          <div class="tag-chips">
+            <button class="chip active" data-hashtag="#BigQuery">#BigQuery</button>
+            <button class="chip active" data-hashtag="#GoogleCloud">#GoogleCloud</button>
+            <button class="chip" data-hashtag="#DataEngineering">#DataEngineering</button>
+            <button class="chip" data-hashtag="#GenerativeAI">#GenerativeAI</button>
+            <button class="chip" data-hashtag="#Database">#Database</button>
+          </div>
+        </div>
+      </main>
+
+      <footer class="dialog-footer">
+        <button class="btn-cancel" onclick="document.getElementById('tweetDialog').close()">Cancel</button>
+        <button id="sendTweetBtn" class="btn-tweet">
+          <svg class="x-logo-svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+          </svg>
+          <span>Post to X</span>
+        </button>
+      </footer>
+    </div>
+  </dialog>
+
+  <!-- Notification Toast -->
+  <div class="toast" id="toast" role="alert" aria-live="polite"></div>
+
+  <!-- Custom Scripts -->
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
