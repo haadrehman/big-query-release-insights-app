@@ -351,6 +351,7 @@ html, body {
   grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   gap: 1.5rem;
   margin-bottom: 2rem;
+  align-items: start;
 }
 
 /* Skeleton Loading State */

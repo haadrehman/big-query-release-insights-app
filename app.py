@@ -107,7 +107,7 @@ def fetch_and_parse_feed(force=False):
                     "date": date_str,
                     "iso_date": iso_date,
                     "type": utype,
-                    "content_html": f"<h3>{utype}</h3>\n{ucontent}",
+                    "content_html": ucontent,
                     "content_text": clean_text,
                     "link": link
                 })
