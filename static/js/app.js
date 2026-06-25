@@ -12,6 +12,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const toast = document.getElementById('toast');
   const themeToggleBtn = document.getElementById('themeToggleBtn');
   const exportCsvBtn = document.getElementById('exportCsvBtn');
+  const dateFilterSelect = document.getElementById('dateFilterSelect');
+  const loadMoreContainer = document.getElementById('loadMoreContainer');
+  const loadMoreBtn = document.getElementById('loadMoreBtn');
+  const backToTopBtn = document.getElementById('backToTopBtn');
 
   // Dialog Elements
   const tweetDialog = document.getElementById('tweetDialog');
@@ -30,6 +34,9 @@ document.addEventListener('DOMContentLoaded', () => {
   let selectedRelease = null;
   let activeFilterType = 'All';
   let searchQuery = '';
+  let dateFilter = 'all';
+  let currentPage = 1;
+  const itemsPerPage = 15;
 
   // Initialize Theme from LocalStorage
   const savedTheme = localStorage.getItem('theme') || 'dark';
@@ -109,6 +116,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // HTML Text Highlight Helper
+  function highlightKeywords(html, query) {
+    if (!query) return html;
+    try {
+      const escapedQuery = query.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+      // Match the query string only if it is outside HTML tags (not followed by a closing tag before opening tag)
+      const regex = new RegExp(`(${escapedQuery})(?=[^<>]*+(?:<|$))`, 'gi');
+      return html.replace(regex, '<mark class="search-highlight">$1</mark>');
+    } catch (e) {
+      return html;
+    }
+  }
+
   // Render cards based on search filters and tag type selection
   function renderReleases() {
     notesGrid.innerHTML = '';
@@ -123,36 +143,70 @@ document.addEventListener('DOMContentLoaded', () => {
         item.type.toLowerCase().includes(query) ||
         item.content_text.toLowerCase().includes(query);
         
-      return matchesType && matchesSearch;
+      // Date Range Match
+      let matchesDateRange = true;
+      if (dateFilter !== 'all' && item.iso_date) {
+        const itemDate = new Date(item.iso_date);
+        const now = new Date();
+        const diffTime = Math.abs(now - itemDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        matchesDateRange = diffDays <= parseInt(dateFilter);
+      }
+        
+      return matchesType && matchesSearch && matchesDateRange;
     });
 
     skeletonContainer.style.display = 'none';
 
-    if (filtered.length === 0) {
+    const totalFilteredCount = filtered.length;
+
+    if (totalFilteredCount === 0) {
       notesGrid.style.display = 'none';
       noResults.style.display = 'block';
+      loadMoreContainer.style.display = 'none';
       return;
     }
 
     noResults.style.display = 'none';
     notesGrid.style.display = 'grid';
 
+    // Paginate items
+    const paginated = filtered.slice(0, currentPage * itemsPerPage);
+
+    // Load More button display toggle
+    if (currentPage * itemsPerPage < totalFilteredCount) {
+      loadMoreContainer.style.display = 'flex';
+    } else {
+      loadMoreContainer.style.display = 'none';
+    }
+
     // Generate HTML for each release note card
-    filtered.forEach(item => {
+    paginated.forEach(item => {
       const card = document.createElement('article');
       card.className = 'release-card';
       
       const typeClass = item.type ? item.type.toLowerCase() : 'general';
       const badgeClass = `badge ${typeClass}`;
 
+      // Highlight matching keywords
+      const highlightedHtml = highlightKeywords(item.content_html, searchQuery);
+
+      // Calculate read time (approx 200 words per minute)
+      const wordCount = item.content_text.split(/\s+/).filter(Boolean).length;
+      const readTimeMins = Math.max(1, Math.ceil(wordCount / 200));
+      const readTimeHtml = `<span class="card-read-time" title="Estimated reading time">${readTimeMins} min read</span>`;
+
       card.innerHTML = `
         <div>
           <div class="card-header">
             <span class="${badgeClass}">${item.type || 'General'}</span>
-            <time class="card-date">${item.date}</time>
+            <div>
+              <time class="card-date">${item.date}</time>
+              ${readTimeHtml}
+            </div>
           </div>
           <div class="card-body">
-            ${item.content_html}
+            ${highlightedHtml}
           </div>
         </div>
         <div class="card-footer">
@@ -259,20 +313,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const offset = ringCircumference - (percent * ringCircumference);
     charProgress.style.strokeDashoffset = offset;
 
-    // Color progress ring depending on length limits
-    if (len >= 280) {
+    // Color progress ring depending on length limits and enforce disabled states
+    if (len > 280) {
       charProgress.style.stroke = '#ef4444'; // Red
       charCount.className = 'char-error';
-      charWarning.style.display = 'none';
+      charWarning.style.display = 'block';
+      charWarning.className = 'char-warning char-error';
+      charWarning.textContent = 'Character limit exceeded!';
+      sendTweetBtn.disabled = true;
     } else if (len >= 250) {
       charProgress.style.stroke = '#f59e0b'; // Amber
       charCount.className = 'char-warning';
       charWarning.style.display = 'block';
+      charWarning.className = 'char-warning';
       charWarning.textContent = 'Approaching limit!';
+      sendTweetBtn.disabled = false;
     } else {
       charProgress.style.stroke = '#3b82f6'; // Blue
       charCount.className = '';
       charWarning.style.display = 'none';
+      sendTweetBtn.disabled = false;
     }
   }
 
@@ -325,6 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
     tagButton.classList.add('active');
 
     activeFilterType = tagButton.dataset.type;
+    currentPage = 1; // Reset to page 1 on filter change
     renderReleases();
   });
 
@@ -334,6 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
       searchQuery = e.target.value;
+      currentPage = 1; // Reset to page 1 on search change
       renderReleases();
     }, 150);
   });
@@ -342,6 +404,9 @@ document.addEventListener('DOMContentLoaded', () => {
   clearFiltersBtn.addEventListener('click', () => {
     searchInput.value = '';
     searchQuery = '';
+    currentPage = 1;
+    dateFilterSelect.value = 'all';
+    dateFilter = 'all';
     
     document.querySelectorAll('.filter-tag').forEach(btn => btn.classList.remove('active'));
     document.querySelector('.filter-tag[data-type="All"]').classList.add('active');
@@ -413,6 +478,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Export CSV Button click
   exportCsvBtn.addEventListener('click', exportToCsv);
+
+  // Date Filter Change Event
+  dateFilterSelect.addEventListener('change', (e) => {
+    dateFilter = e.target.value;
+    currentPage = 1; // Reset to page 1
+    renderReleases();
+  });
+
+  // Load More Button Click Event
+  loadMoreBtn.addEventListener('click', () => {
+    currentPage++;
+    renderReleases();
+  });
+
+  // Scroll event for Floating Back to Top Button
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 400) {
+      backToTopBtn.classList.add('show');
+    } else {
+      backToTopBtn.classList.remove('show');
+    }
+  });
+
+  // Back to Top click event
+  backToTopBtn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // Keyboard Shortcuts Listener
+  document.addEventListener('keydown', (e) => {
+    // Focus search input when pressing "/" (unless focus is on form elements)
+    if (e.key === '/' && 
+        document.activeElement !== searchInput && 
+        document.activeElement.tagName !== 'INPUT' && 
+        document.activeElement.tagName !== 'TEXTAREA') {
+      e.preventDefault();
+      searchInput.focus();
+      searchInput.select();
+    }
+  });
 
   // Refresh Button click
   refreshBtn.addEventListener('click', () => {

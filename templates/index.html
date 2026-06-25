@@ -87,11 +87,21 @@
 
     <!-- Filters Section -->
     <section class="filters-section">
-      <div class="search-bar">
-        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-        </svg>
-        <input type="text" id="searchInput" placeholder="Search updates (e.g. embeddings, Gemini, continuous queries...)" aria-label="Search release notes">
+      <div class="search-and-date-row">
+        <div class="search-bar">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+          </svg>
+          <input type="text" id="searchInput" placeholder="Search updates (e.g. embeddings, Gemini, continuous queries...)" aria-label="Search release notes">
+        </div>
+        <div class="date-filter-container">
+          <select id="dateFilterSelect" class="date-filter-select" aria-label="Filter by date range">
+            <option value="all">All Time</option>
+            <option value="7">Past 7 Days</option>
+            <option value="30">Past 30 Days</option>
+            <option value="90">Past 90 Days</option>
+          </select>
+        </div>
       </div>
       
       <div class="filter-group">
@@ -120,6 +130,11 @@
       <!-- Release Notes Grid -->
       <div class="notes-grid" id="notesGrid" style="display: none;">
         <!-- Dynamic Cards Inserted Here -->
+      </div>
+
+      <!-- Load More Button -->
+      <div class="load-more-container" id="loadMoreContainer" style="display: none;">
+        <button id="loadMoreBtn" class="btn-load-more">Load More Updates</button>
       </div>
 
       <!-- No Results State -->
@@ -164,7 +179,7 @@
         <!-- Custom Composer Textarea -->
         <div class="composer-container">
           <label for="tweetContent" class="field-label">Customize your Tweet:</label>
-          <textarea id="tweetContent" rows="6" maxlength="280" placeholder="What's happening?"></textarea>
+          <textarea id="tweetContent" rows="6" maxlength="500" placeholder="What's happening?"></textarea>
           
           <!-- Character Count Tracker -->
           <div class="composer-footer">
@@ -205,6 +220,13 @@
       </footer>
     </div>
   </dialog>
+
+  <!-- Floating Back to Top Button -->
+  <button id="backToTopBtn" class="btn-back-to-top" aria-label="Back to top" title="Back to top">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m18 15-6-6-6 6"/>
+    </svg>
+  </button>
 
   <!-- Notification Toast -->
   <div class="toast" id="toast" role="alert" aria-live="polite"></div>
