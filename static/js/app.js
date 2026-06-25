@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const noResults = document.getElementById('noResults');
   const clearFiltersBtn = document.getElementById('clearFiltersBtn');
   const toast = document.getElementById('toast');
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
+  const exportCsvBtn = document.getElementById('exportCsvBtn');
 
   // Dialog Elements
   const tweetDialog = document.getElementById('tweetDialog');
@@ -28,6 +30,10 @@ document.addEventListener('DOMContentLoaded', () => {
   let selectedRelease = null;
   let activeFilterType = 'All';
   let searchQuery = '';
+
+  // Initialize Theme from LocalStorage
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
 
   // Progress ring variables (Radius: 9, Circumference: 2 * PI * r = 56.54)
   const ringRadius = 9;
@@ -156,14 +162,41 @@ document.addEventListener('DOMContentLoaded', () => {
               <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3"/>
             </svg>
           </a>
-          <button class="btn-tweet-action" aria-label="Tweet this release note">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-            </svg>
-            <span>Tweet</span>
-          </button>
+          <div class="card-actions">
+            <button class="btn-copy-action" aria-label="Copy plain text to clipboard" title="Copy to Clipboard">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+              <span>Copy</span>
+            </button>
+            <button class="btn-tweet-action" aria-label="Tweet this release note">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+              <span>Tweet</span>
+            </button>
+          </div>
         </div>
       `;
+
+      // Event listener for Copying card plain text
+      const copyBtn = card.querySelector('.btn-copy-action');
+      copyBtn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(item.content_text);
+          copyBtn.classList.add('copied');
+          const span = copyBtn.querySelector('span');
+          span.textContent = 'Copied!';
+          showToast('Copied to clipboard!', 'success');
+          setTimeout(() => {
+            copyBtn.classList.remove('copied');
+            span.textContent = 'Copy';
+          }, 2000);
+        } catch (err) {
+          console.error('Failed to copy: ', err);
+          showToast('Failed to copy to clipboard', 'error');
+        }
+      });
 
       // Event listener for Tweeting from this card
       const tweetBtn = card.querySelector('.btn-tweet-action');
@@ -316,6 +349,70 @@ document.addEventListener('DOMContentLoaded', () => {
     
     renderReleases();
   });
+
+  // Theme Switcher button click
+  themeToggleBtn.addEventListener('click', () => {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    showToast(`Theme switched to ${newTheme} mode!`, 'success');
+  });
+
+  // Export CSV helper
+  function exportToCsv() {
+    const filtered = releases.filter(item => {
+      const matchesType = activeFilterType === 'All' || item.type.toLowerCase() === activeFilterType.toLowerCase();
+      const query = searchQuery.toLowerCase().trim();
+      const matchesSearch = !query || 
+        item.date.toLowerCase().includes(query) ||
+        item.type.toLowerCase().includes(query) ||
+        item.content_text.toLowerCase().includes(query);
+      return matchesType && matchesSearch;
+    });
+
+    if (filtered.length === 0) {
+      showToast('No releases to export!', 'error');
+      return;
+    }
+
+    const headers = ['Date', 'Type', 'Link', 'Description'];
+    const rows = filtered.map(item => [
+      item.date,
+      item.type,
+      item.link,
+      item.content_text
+    ]);
+
+    const escapeCsv = (val) => {
+      if (val === null || val === undefined) return '';
+      let str = String(val);
+      str = str.replace(/"/g, '""');
+      if (str.includes(',') || str.includes('\n') || str.includes('"')) {
+        str = `"${str}"`;
+      }
+      return str;
+    };
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(escapeCsv).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `bigquery_releases_${activeFilterType.toLowerCase()}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('CSV export started!', 'success');
+  }
+
+  // Export CSV Button click
+  exportCsvBtn.addEventListener('click', exportToCsv);
 
   // Refresh Button click
   refreshBtn.addEventListener('click', () => {
